@@ -5,11 +5,11 @@ import AuthPopover from './AuthPopover';
 
 interface HeaderProps {
   user: UserProfile | null;
-  onLogin: (provider: AuthProvider) => void;
+  onCustomLogin: (name: string, email: string, provider?: AuthProvider) => void;
   onLogout: () => void;
 }
 
-export default function Header({ user, onLogin, onLogout }: HeaderProps) {
+export default function Header({ user, onCustomLogin, onLogout }: HeaderProps) {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const authRef = useRef<HTMLDivElement>(null);
 
@@ -24,31 +24,31 @@ export default function Header({ user, onLogin, onLogout }: HeaderProps) {
   }, []);
 
   return (
-    <header className="px-6 py-4 flex justify-between items-center border-b border-white/10 bg-black/20 backdrop-blur-md relative z-10">
+    <header className="px-6 py-4 flex justify-between items-center border-b border-slate-800 bg-slate-900/80 backdrop-blur-md relative z-10">
       <div className="flex items-center space-x-3">
-        <div className="bg-gradient-to-tr from-blue-500 to-purple-500 p-2 rounded-xl shadow-lg">
-          <LayoutDashboard size={24} className="text-white" />
+        <div className="bg-gradient-to-tr from-indigo-500 to-purple-500 p-2 rounded-xl shadow-lg">
+          <LayoutDashboard size={22} className="text-white" />
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-white/90">Таскборд</h1>
+        <h1 className="text-xl font-bold tracking-tight text-white">Канбан Таскборд</h1>
       </div>
 
       {/* Auth Widget */}
       <div className="relative" ref={authRef}>
         <button
           onClick={() => setIsAuthOpen(!isAuthOpen)}
-          className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 transition-colors rounded-full p-1 pr-4 border border-white/10 cursor-pointer"
+          className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 transition rounded-full p-1 pr-4 border border-slate-700 cursor-pointer"
         >
           {user ? (
             <>
-              <img src={user.avatar} alt="Avatar" className="w-8 h-8 rounded-full border border-white/20" />
-              <span className="text-sm font-medium text-white/90 truncate max-w-[120px]">{user.name}</span>
+              <img src={user.avatar} alt="Avatar" className="w-8 h-8 rounded-full border border-indigo-400/50" />
+              <span className="text-xs font-semibold text-white max-w-[120px] truncate">{user.name}</span>
             </>
           ) : (
             <>
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <User size={16} className="text-white/70" />
+              <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
+                <User size={16} className="text-slate-300" />
               </div>
-              <span className="text-sm font-medium text-white/90">Гість</span>
+              <span className="text-xs font-semibold text-slate-300">Гість</span>
             </>
           )}
         </button>
@@ -56,8 +56,8 @@ export default function Header({ user, onLogin, onLogout }: HeaderProps) {
         {isAuthOpen && (
           <AuthPopover
             user={user}
-            onLogin={(provider) => {
-              onLogin(provider);
+            onCustomLogin={(name, email, provider) => {
+              onCustomLogin(name, email, provider);
               setIsAuthOpen(false);
             }}
             onLogout={() => {
