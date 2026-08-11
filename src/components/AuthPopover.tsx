@@ -37,6 +37,12 @@ export default function AuthPopover({ user, onCustomLogin, onLogout }: AuthPopov
   useEffect(() => {
     if (user) return;
 
+    const clientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId || clientId.includes('example')) {
+      // No real Google Client ID configured, skip GSI widget to avoid 401 invalid_client popup
+      return;
+    }
+
     // Load Google GIS script dynamically if not present
     const existingScript = document.getElementById('google-gsi-script');
     if (!existingScript) {
@@ -70,9 +76,7 @@ export default function AuthPopover({ user, onCustomLogin, onLogout }: AuthPopov
 
       try {
         (window as any).google.accounts.id.initialize({
-          client_id:
-            (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
-            '1000000000000-example.apps.googleusercontent.com',
+          client_id: clientId,
           callback: handleCredentialResponse,
         });
 
@@ -96,15 +100,19 @@ export default function AuthPopover({ user, onCustomLogin, onLogout }: AuthPopov
     e.preventDefault();
     setErrorMsg('');
 
-    const trimmedName = inputName.trim();
-    const trimmedEmail = inputEmail.trim();
+    let name = inputName.trim();
+    let email = inputEmail.trim();
 
-    if (!trimmedName || !trimmedEmail) {
-      setErrorMsg("Будь ласка, введіть ім'я та email!");
-      return;
+    if (!name && !email) {
+      name = 'Користувач';
+      email = 'random_address@mail.com';
+    } else if (!name) {
+      name = email.split('@')[0];
+    } else if (!email) {
+      email = `${name.toLowerCase().replace(/\s+/g, '.')}@gmail.com`;
     }
 
-    onCustomLogin(trimmedName, trimmedEmail, provider, inputAvatar.trim() || undefined);
+    onCustomLogin(name, email, provider, inputAvatar.trim() || undefined);
   };
 
   return (
@@ -150,11 +158,11 @@ export default function AuthPopover({ user, onCustomLogin, onLogout }: AuthPopov
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-              Ваше реальне ім'я *
+              Ваше ім'я *
             </label>
             <input
               type="text"
-              placeholder="Наприклад: Станіслав Мазур"
+              placeholder="Ваше ім'я"
               value={inputName}
               onChange={(e) => setInputName(e.target.value)}
               className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
@@ -164,11 +172,11 @@ export default function AuthPopover({ user, onCustomLogin, onLogout }: AuthPopov
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-              Ваш реальний Email *
+              Електронна адреса *
             </label>
             <input
               type="email"
-              placeholder="stasmazur885@gmail.com"
+              placeholder="random_address@mail.com"
               value={inputEmail}
               onChange={(e) => setInputEmail(e.target.value)}
               className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"

@@ -13,25 +13,17 @@ export const INITIAL_BOARDS: Board[] = [
     id: 'board-1',
     title: 'Моя Канбан Дошка',
     description: 'Простір для вашої особистої та командної роботи',
-    ownerId: 'usr-guest',
-    participants: [
-      {
-        id: 'usr-guest',
-        name: 'Гість',
-        email: 'guest@local',
-        avatar: 'https://ui-avatars.com/api/?name=Guest&background=6366f1&color=fff',
-        role: 'owner',
-      },
-    ],
+    ownerId: GUEST_USER.id,
+    participants: [GUEST_USER],
     createdAt: new Date().toISOString().split('T')[0],
   },
 ];
 
 export const INITIAL_COLUMNS: Column[] = [
-  { id: 'col-1', boardId: 'board-1', title: 'To Do (Заплановано)', position: 1 },
-  { id: 'col-2', boardId: 'board-1', title: 'In Progress (В роботі)', position: 2 },
-  { id: 'col-3', boardId: 'board-1', title: 'Review (Перевірка)', position: 3 },
-  { id: 'col-4', boardId: 'board-1', title: 'Done (Завершено)', position: 4 },
+  { id: 'col-1', boardId: 'board-1', title: 'Заплановано', position: 1 },
+  { id: 'col-2', boardId: 'board-1', title: 'В роботі', position: 2 },
+  { id: 'col-3', boardId: 'board-1', title: 'Перевірка', position: 3 },
+  { id: 'col-4', boardId: 'board-1', title: 'Завершено', position: 4 },
 ];
 
 export const INITIAL_CARDS: Card[] = [

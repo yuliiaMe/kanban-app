@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import {
   Plus,
   Users,
-  HelpCircle,
   FolderPlus,
   Layout,
   Crown,
   Shield,
   Trash2,
-  List,
-  SlidersHorizontal,
+  X,
+  Check,
 } from 'lucide-react';
 import { Board, Column, Card, Participant, OrderingStrategy, UserRole } from '../types';
 import {
@@ -22,6 +21,7 @@ import { calculatePosition, reindexColumnCards } from '../utils/positioning';
 import ColumnComponent from './ColumnComponent';
 import CardModal from './CardModal';
 import ParticipantModal from './ParticipantModal';
+import NewBoardModal from './NewBoardModal';
 
 interface BoardProps {
   currentUser?: Participant;
@@ -33,7 +33,7 @@ export default function BoardView({ currentUser = GUEST_USER }: BoardProps) {
   const [activeBoardId, setActiveBoardId] = useState<string>(INITIAL_BOARDS[0].id);
   const [columns, setColumns] = useState<Column[]>(INITIAL_COLUMNS);
   const [cards, setCards] = useState<Card[]>(INITIAL_CARDS);
-  const [orderingStrategy, setOrderingStrategy] = useState<OrderingStrategy>('fractional');
+  const [orderingStrategy] = useState<OrderingStrategy>('fractional');
 
   // Modals state
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
@@ -41,15 +41,16 @@ export default function BoardView({ currentUser = GUEST_USER }: BoardProps) {
   const [targetColumnId, setTargetColumnId] = useState<string>('');
 
   const [isParticipantModalOpen, setIsParticipantModalOpen] = useState(false);
-  const [isDefenseModalOpen, setIsDefenseModalOpen] = useState(false);
   const [isNewBoardModalOpen, setIsNewBoardModalOpen] = useState(false);
 
-  // New board inputs
-  const [newBoardTitle, setNewBoardTitle] = useState('');
-  const [newBoardDesc, setNewBoardDesc] = useState('');
+  // Inline New Column state
+  const [isAddingColumn, setIsAddingColumn] = useState(false);
+  const [newColumnTitle, setNewColumnTitle] = useState('');
 
   // Drag state
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
+  const [hoverCardId, setHoverCardId] = useState<string | null>(null);
+  const [hoverPosition, setHoverPosition] = useState<'above' | 'below'>('below');
 
   // Active board object
   const activeBoard = boards.find((b) => b.id === activeBoardId) || boards[0];
@@ -58,33 +59,30 @@ export default function BoardView({ currentUser = GUEST_USER }: BoardProps) {
   const activeUserParticipant =
     activeBoard?.participants.find((p) => p.email === currentUser.email) || {
       ...currentUser,
-      role: (activeBoard?.ownerId === currentUser.id ? 'owner' : 'editor') as UserRole,
+      // Non-participants on board default to viewer for security
+      role: (activeBoard?.ownerId === currentUser.id ? 'owner' : 'viewer') as UserRole,
     };
 
   const userRole = activeUserParticipant.role;
   const canEdit = userRole === 'owner' || userRole === 'editor';
   const isOwner = userRole === 'owner';
 
-  // Filter columns and cards for active board
+  // Filter columns for active board
   const activeColumns = columns
     .filter((col) => col.boardId === activeBoard.id)
     .sort((a, b) => a.position - b.position);
 
   // Board creation
-  const handleCreateBoard = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newBoardTitle.trim()) return;
-
+  const handleCreateBoard = (title: string, description: string) => {
     const newBoard: Board = {
       id: `board-${Date.now()}`,
-      title: newBoardTitle.trim(),
-      description: newBoardDesc.trim(),
+      title,
+      description,
       ownerId: currentUser.id,
       participants: [{ ...currentUser, role: 'owner' }],
       createdAt: new Date().toISOString().split('T')[0],
     };
 
-    // Default columns for new board
     const defaultCols: Column[] = [
       { id: `col-${Date.now()}-1`, boardId: newBoard.id, title: 'Заплановано', position: 1 },
       { id: `col-${Date.now()}-2`, boardId: newBoard.id, title: 'В роботі', position: 2 },
@@ -94,18 +92,21 @@ export default function BoardView({ currentUser = GUEST_USER }: BoardProps) {
     setBoards([...boards, newBoard]);
     setColumns([...columns, ...defaultCols]);
     setActiveBoardId(newBoard.id);
-    setNewBoardTitle('');
-    setNewBoardDesc('');
-    setIsNewBoardModalOpen(false);
   };
 
-  // Delete Board
+  // Delete Board with cascade cleanup (columns and cards)
   const handleDeleteBoard = () => {
     if (boards.length <= 1) {
       alert('Не можна видалити останню дошку!');
       return;
     }
     if (confirm(`Ви дійсно хочете видалити дошку "${activeBoard.title}"?`)) {
+      const boardColIds = columns.filter((c) => c.boardId === activeBoard.id).map((c) => c.id);
+
+      // Clean up columns and cards
+      setColumns((prev) => prev.filter((c) => c.boardId !== activeBoard.id));
+      setCards((prev) => prev.filter((card) => !boardColIds.includes(card.columnId)));
+
       const remainingBoards = boards.filter((b) => b.id !== activeBoard.id);
       setBoards(remainingBoards);
       setActiveBoardId(remainingBoards[0].id);
@@ -113,19 +114,21 @@ export default function BoardView({ currentUser = GUEST_USER }: BoardProps) {
   };
 
   // Add Column
-  const handleAddColumn = () => {
-    const title = prompt('Введіть назву нової колонки:');
-    if (!title || !title.trim()) return;
+  const handleAddColumnSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newColumnTitle.trim()) return;
 
     const maxPos = activeColumns.reduce((max, c) => Math.max(max, c.position), 0);
     const newCol: Column = {
       id: `col-${Date.now()}`,
       boardId: activeBoard.id,
-      title: title.trim(),
+      title: newColumnTitle.trim(),
       position: maxPos + 1,
     };
 
     setColumns([...columns, newCol]);
+    setNewColumnTitle('');
+    setIsAddingColumn(false);
   };
 
   // Rename Column
@@ -144,16 +147,10 @@ export default function BoardView({ currentUser = GUEST_USER }: BoardProps) {
   // Card Save / Create / Edit
   const handleSaveCard = (cardData: Omit<Card, 'id' | 'createdAt'> & { id?: string }) => {
     if (cardData.id) {
-      // Edit
       setCards(
-        cards.map((c) =>
-          c.id === cardData.id
-            ? { ...c, ...cardData }
-            : c
-        )
+        cards.map((c) => (c.id === cardData.id ? { ...c, ...cardData } : c))
       );
     } else {
-      // Create new
       const colCards = cards.filter((c) => c.columnId === cardData.columnId);
       const maxPos = colCards.reduce((max, c) => Math.max(max, c.position), 0);
 
@@ -173,6 +170,16 @@ export default function BoardView({ currentUser = GUEST_USER }: BoardProps) {
     setCards(cards.filter((c) => c.id !== cardId));
   };
 
+  // Participant Removed Cascade Handler
+  const handleParticipantRemoved = (participantId: string) => {
+    setCards((prevCards) =>
+      prevCards.map((card) => ({
+        ...card,
+        assignee: card.assignee?.id === participantId ? undefined : card.assignee,
+      }))
+    );
+  };
+
   // Drag and drop handlers
   const handleDragStartCard = (e: React.DragEvent, card: Card) => {
     setDraggedCardId(card.id);
@@ -181,6 +188,14 @@ export default function BoardView({ currentUser = GUEST_USER }: BoardProps) {
 
   const handleDragOverCard = (e: React.DragEvent, hoverCard: Card) => {
     e.preventDefault();
+    if (hoverCard.id === draggedCardId) return;
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    const placement = e.clientY < midY ? 'above' : 'below';
+
+    setHoverCardId(hoverCard.id);
+    setHoverPosition(placement);
   };
 
   const handleDropCardOnColumn = (e: React.DragEvent, destColumnId: string) => {
@@ -190,15 +205,34 @@ export default function BoardView({ currentUser = GUEST_USER }: BoardProps) {
     const cardToMove = cards.find((c) => c.id === draggedCardId);
     if (!cardToMove) return;
 
-    // Target column's current sorted cards
+    // Destination column cards excluding the moved card
     const destCards = cards
       .filter((c) => c.columnId === destColumnId && c.id !== draggedCardId)
       .sort((a, b) => a.position - b.position);
 
-    const prevPos = destCards.length > 0 ? destCards[destCards.length - 1].position : null;
+    let prevPos: number | null = null;
+    let nextPos: number | null = null;
+
+    if (hoverCardId && destCards.some((c) => c.id === hoverCardId)) {
+      const hoverIndex = destCards.findIndex((c) => c.id === hoverCardId);
+      if (hoverIndex !== -1) {
+        if (hoverPosition === 'above') {
+          prevPos = hoverIndex > 0 ? destCards[hoverIndex - 1].position : null;
+          nextPos = destCards[hoverIndex].position;
+        } else {
+          prevPos = destCards[hoverIndex].position;
+          nextPos = hoverIndex < destCards.length - 1 ? destCards[hoverIndex + 1].position : null;
+        }
+      }
+    } else {
+      // Default drop at the bottom of column
+      prevPos = destCards.length > 0 ? destCards[destCards.length - 1].position : null;
+      nextPos = null;
+    }
+
     const { newPos, requiresReindex } = calculatePosition(
       prevPos,
-      null,
+      nextPos,
       orderingStrategy
     );
 
@@ -219,21 +253,7 @@ export default function BoardView({ currentUser = GUEST_USER }: BoardProps) {
 
     setCards(updatedCardList);
     setDraggedCardId(null);
-  };
-
-  // Normalize all column positions
-  const handleNormalizeAll = () => {
-    let normalizedAll = [...cards];
-    activeColumns.forEach((col) => {
-      const colCards = normalizedAll.filter((c) => c.columnId === col.id);
-      const normalized = reindexColumnCards(colCards);
-      normalizedAll = normalizedAll.map((c) => {
-        const found = normalized.find((nc) => nc.id === c.id);
-        return found || c;
-      });
-    });
-    setCards(normalizedAll);
-    alert('Усі позиції карток успішно скинуто до цілих чисел 1, 2, 3...!');
+    setHoverCardId(null);
   };
 
   return (
@@ -269,7 +289,7 @@ export default function BoardView({ currentUser = GUEST_USER }: BoardProps) {
           {/* User Role Badge */}
           <div
             className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 text-xs rounded-lg border border-slate-700 text-slate-300"
-            title={`Ваші права на цієї дошці: ${userRole}`}
+            title={`Ваші права на цій дошці: ${userRole}`}
           >
             {isOwner ? (
               <Crown className="w-3.5 h-3.5 text-amber-400" />
@@ -343,15 +363,52 @@ export default function BoardView({ currentUser = GUEST_USER }: BoardProps) {
           );
         })}
 
-        {/* Add Column Button */}
+        {/* Add Column Button / Form */}
         {canEdit && (
-          <button
-            onClick={handleAddColumn}
-            className="w-72 shrink-0 h-32 border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/30 hover:bg-slate-900/60 rounded-2xl flex flex-col items-center justify-center text-slate-400 hover:text-indigo-300 font-semibold text-xs gap-2 transition"
-          >
-            <Plus className="w-6 h-6 p-1 bg-slate-800 rounded-lg text-indigo-400" />
-            Додати нову колонку
-          </button>
+          <div className="w-72 shrink-0">
+            {isAddingColumn ? (
+              <form
+                onSubmit={handleAddColumnSubmit}
+                className="p-3 bg-slate-900 border border-indigo-500/50 rounded-2xl space-y-2 shadow-xl"
+              >
+                <input
+                  type="text"
+                  placeholder="Назва колонки..."
+                  value={newColumnTitle}
+                  onChange={(e) => setNewColumnTitle(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                  autoFocus
+                  required
+                />
+                <div className="flex items-center gap-1.5 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingColumn(false);
+                      setNewColumnTitle('');
+                    }}
+                    className="p-1.5 text-slate-400 hover:bg-slate-800 rounded-lg text-xs"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1"
+                  >
+                    <Check className="w-3.5 h-3.5" /> Додати
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                onClick={() => setIsAddingColumn(true)}
+                className="w-full h-32 border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/30 hover:bg-slate-900/60 rounded-2xl flex flex-col items-center justify-center text-slate-400 hover:text-indigo-300 font-semibold text-xs gap-2 transition cursor-pointer"
+              >
+                <Plus className="w-6 h-6 p-1 bg-slate-800 rounded-lg text-indigo-400" />
+                Додати нову колонку
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -380,58 +437,14 @@ export default function BoardView({ currentUser = GUEST_USER }: BoardProps) {
           );
           setBoards(updatedBoards);
         }}
+        onParticipantRemoved={handleParticipantRemoved}
       />
 
-      {/* New Board Modal */}
-      {isNewBoardModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-            <h3 className="text-base font-bold text-white">Створити нову дошку</h3>
-            <form onSubmit={handleCreateBoard} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                  Назва дошки *
-                </label>
-                <input
-                  type="text"
-                  value={newBoardTitle}
-                  onChange={(e) => setNewBoardTitle(e.target.value)}
-                  placeholder="Наприклад: Мобільний додаток"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                  Короткий опис
-                </label>
-                <input
-                  type="text"
-                  value={newBoardDesc}
-                  onChange={(e) => setNewBoardDesc(e.target.value)}
-                  placeholder="Про що ця дошка..."
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsNewBoardModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold"
-                >
-                  Скасувати
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold"
-                >
-                  Створити
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <NewBoardModal
+        isOpen={isNewBoardModalOpen}
+        onClose={() => setIsNewBoardModalOpen(false)}
+        onCreateBoard={handleCreateBoard}
+      />
     </div>
   );
 }

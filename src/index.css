@@ -12,27 +12,42 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #0f172a;
+  background-color: #020617;
   color: #f8fafc;
   min-height: 100vh;
 }
 
-/* Fallbacks to guarantee header flex layout */
-header {
-  display: flex !important;
-  flex-direction: row !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  width: 100% !important;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-header > div:first-child {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: 0.75rem !important;
+.animate-fadeIn {
+  animation: fadeIn 0.15s ease-out forwards;
 }
 
-header > div.relative {
-  margin-left: auto !important;
+/* Custom scrollbar for columns canvas */
+.scrollbar-thin::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 9999px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(51, 65, 85, 0.8);
+  border-radius: 9999px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.8);
 }

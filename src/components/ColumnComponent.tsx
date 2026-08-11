@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, MoreVertical, Trash2, Edit2, Check, X, Layers } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, Layers } from 'lucide-react';
 import { Column, Card } from '../types';
 import CardComponent from './CardComponent';
 
@@ -18,7 +18,7 @@ interface ColumnComponentProps {
 
 export default function ColumnComponent({
   column,
-  cards = [],
+  cards,
   onRenameColumn,
   onDeleteColumn,
   onAddCardClick,
@@ -28,15 +28,14 @@ export default function ColumnComponent({
   onDropCardOnColumn,
   canEdit,
 }: ColumnComponentProps) {
-  if (!column) return null;
-
+  // Hooks MUST be called at the top level before any conditional return (Rules of Hooks)
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [titleInput, setTitleInput] = useState(column.title || '');
+  const [titleInput, setTitleInput] = useState(column?.title || '');
   const [isDragOverColumn, setIsDragOverColumn] = useState(false);
 
-  const sortedCards = (cards || [])
-    .filter(Boolean)
-    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  if (!column) return null;
+
+  const sortedCards = [...cards].sort((a, b) => a.position - b.position);
 
   const handleSaveTitle = () => {
     if (titleInput.trim() && titleInput.trim() !== column.title) {
@@ -45,13 +44,26 @@ export default function ColumnComponent({
     setIsEditingTitle(false);
   };
 
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOverColumn(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Only clear highlight if leaving the column container itself
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOverColumn(false);
+    }
+  };
+
   return (
     <div
+      onDragEnter={handleDragEnter}
       onDragOver={(e) => {
         e.preventDefault();
-        setIsDragOverColumn(true);
+        if (!isDragOverColumn) setIsDragOverColumn(true);
       }}
-      onDragLeave={() => setIsDragOverColumn(false)}
+      onDragLeave={handleDragLeave}
       onDrop={(e) => {
         setIsDragOverColumn(false);
         onDropCardOnColumn(e, column.id);
@@ -78,13 +90,15 @@ export default function ColumnComponent({
               />
               <button
                 onClick={handleSaveTitle}
-                className="p-1 text-emerald-400 hover:bg-slate-800 rounded"
+                className="p-1 text-emerald-400 hover:bg-slate-800 rounded transition"
+                title="Зберегти"
               >
                 <Check className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => setIsEditingTitle(false)}
-                className="p-1 text-slate-400 hover:bg-slate-800 rounded"
+                className="p-1 text-slate-400 hover:bg-slate-800 rounded transition"
+                title="Скасувати"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
