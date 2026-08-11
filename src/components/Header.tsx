@@ -5,7 +5,7 @@ import AuthPopover from './AuthPopover';
 
 interface HeaderProps {
   user: UserProfile | null;
-  onCustomLogin: (name: string, email: string, provider?: AuthProvider) => void;
+  onCustomLogin: (name: string, email: string, provider?: AuthProvider, avatarUrl?: string) => void;
   onLogout: () => void;
 }
 
@@ -14,14 +14,28 @@ export default function Header({ user, onCustomLogin, onLogout }: HeaderProps) {
   const authRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!isAuthOpen) return;
+
     function handleClickOutside(event: MouseEvent) {
       if (authRef.current && !authRef.current.contains(event.target as Node)) {
         setIsAuthOpen(false);
       }
     }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsAuthOpen(false);
+      }
+    }
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isAuthOpen]);
 
   return (
     <header className="px-6 py-4 flex justify-between items-center border-b border-slate-800 bg-slate-900/80 backdrop-blur-md relative z-10">
@@ -40,8 +54,20 @@ export default function Header({ user, onCustomLogin, onLogout }: HeaderProps) {
         >
           {user ? (
             <>
-              <img src={user.avatar} alt="Avatar" className="w-8 h-8 rounded-full border border-indigo-400/50" />
-              <span className="text-xs font-semibold text-white max-w-[120px] truncate">{user.name}</span>
+              <img
+                src={user.avatar}
+                alt="Avatar"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                    user.name
+                  )}&background=6366f1&color=fff`;
+                }}
+                className="w-8 h-8 rounded-full border border-indigo-400/50"
+              />
+              <span className="text-xs font-semibold text-white max-w-[120px] truncate">
+                {user.name}
+              </span>
             </>
           ) : (
             <>
