@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
-import BoardView from './components/Board';
-import { UserProfile, AuthProvider, Participant } from './types';
-import { GUEST_USER } from './data/mockData';
+import { UserProfile, AuthProvider } from './types';
 
 const AUTH_STORAGE_KEY = 'kanban_user_session';
 
@@ -34,7 +32,6 @@ export default function App() {
     provider: AuthProvider = 'Google',
     avatarUrl?: string
   ) => {
-    // Generate deterministic or persistent user id based on email
     const userId = `usr-${btoa(email.toLowerCase()).replace(/=/g, '').slice(0, 12)}`;
     const avatar =
       avatarUrl ||
@@ -54,21 +51,40 @@ export default function App() {
     setUser(null);
   };
 
-  const currentUserParticipant: Participant = user
-    ? {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        avatar: user.avatar,
-        role: 'owner',
-      }
-    : GUEST_USER;
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
       <Header user={user} onCustomLogin={handleCustomLogin} onLogout={handleLogout} />
-      <main className="w-full">
-        <BoardView currentUser={currentUserParticipant} />
+      <main className="max-w-7xl mx-auto px-6 py-12 flex flex-col items-center justify-center text-center">
+        <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">⚡</span>
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">Канбан Таскборд</h2>
+          <p className="text-sm text-slate-400 mb-6">
+            Базова структура проекту та аутентифікація користувача готові.
+          </p>
+
+          {user ? (
+            <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-left">
+              <p className="text-xs text-slate-400 uppercase font-semibold mb-1">Поточний користувач:</p>
+              <div className="flex items-center gap-3">
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-10 h-10 rounded-full border border-indigo-500"
+                />
+                <div>
+                  <p className="text-sm font-semibold text-white">{user.name}</p>
+                  <p className="text-xs text-slate-400 font-mono">{user.email}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500 bg-slate-950/50 py-3 px-4 rounded-xl border border-slate-800">
+              Натисніть на кнопку профілю у верхньому правому кутку для авторизації через Google.
+            </p>
+          )}
+        </div>
       </main>
     </div>
   );
