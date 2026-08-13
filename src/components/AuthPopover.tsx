@@ -37,12 +37,15 @@ export default function AuthPopover({ user, onCustomLogin, onLogout }: AuthPopov
   useEffect(() => {
     if (user) return;
 
+<<<<<<< HEAD
     const clientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID;
     if (!clientId || clientId.includes('example')) {
       // No real Google Client ID configured, skip GSI widget to avoid 401 invalid_client popup
       return;
     }
 
+=======
+>>>>>>> af3c9c87e777fd6e7ae200220013df3aeb3bd349
     // Load Google GIS script dynamically if not present
     const existingScript = document.getElementById('google-gsi-script');
     if (!existingScript) {
@@ -76,7 +79,13 @@ export default function AuthPopover({ user, onCustomLogin, onLogout }: AuthPopov
 
       try {
         (window as any).google.accounts.id.initialize({
+<<<<<<< HEAD
           client_id: clientId,
+=======
+          client_id:
+            (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
+            '1000000000000-example.apps.googleusercontent.com',
+>>>>>>> af3c9c87e777fd6e7ae200220013df3aeb3bd349
           callback: handleCredentialResponse,
         });
 
@@ -100,6 +109,7 @@ export default function AuthPopover({ user, onCustomLogin, onLogout }: AuthPopov
     e.preventDefault();
     setErrorMsg('');
 
+<<<<<<< HEAD
     let name = inputName.trim();
     let email = inputEmail.trim();
 
@@ -113,6 +123,17 @@ export default function AuthPopover({ user, onCustomLogin, onLogout }: AuthPopov
     }
 
     onCustomLogin(name, email, provider, inputAvatar.trim() || undefined);
+=======
+    const trimmedName = inputName.trim();
+    const trimmedEmail = inputEmail.trim();
+
+    if (!trimmedName || !trimmedEmail) {
+      setErrorMsg("Будь ласка, введіть ім'я та email!");
+      return;
+    }
+
+    onCustomLogin(trimmedName, trimmedEmail, provider, inputAvatar.trim() || undefined);
+>>>>>>> af3c9c87e777fd6e7ae200220013df3aeb3bd349
   };
 
   return (
@@ -158,7 +179,11 @@ export default function AuthPopover({ user, onCustomLogin, onLogout }: AuthPopov
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+<<<<<<< HEAD
               Ваше ім'я *
+=======
+              Ваше реальне ім'я *
+>>>>>>> af3c9c87e777fd6e7ae200220013df3aeb3bd349
             </label>
             <input
               type="text"
@@ -172,7 +197,11 @@ export default function AuthPopover({ user, onCustomLogin, onLogout }: AuthPopov
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+<<<<<<< HEAD
               Електронна адреса *
+=======
+              Ваш реальний Email *
+>>>>>>> af3c9c87e777fd6e7ae200220013df3aeb3bd349
             </label>
             <input
               type="email"
