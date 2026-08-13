@@ -1,0 +1,7 @@
+{
+  "name": "Collaborative Taskboard",
+  "description": "A collaborative taskboard application with Google and Facebook OAuth integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
